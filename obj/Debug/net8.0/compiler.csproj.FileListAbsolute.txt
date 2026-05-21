@@ -1,0 +1,14 @@
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.GeneratedMSBuildEditorConfig.editorconfig
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.AssemblyInfoInputs.cache
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.AssemblyInfo.cs
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.csproj.CoreCompileInputs.cache
+/home/pilid1337/ЯПы/compiler/bin/Debug/net8.0/compiler
+/home/pilid1337/ЯПы/compiler/bin/Debug/net8.0/compiler.deps.json
+/home/pilid1337/ЯПы/compiler/bin/Debug/net8.0/compiler.runtimeconfig.json
+/home/pilid1337/ЯПы/compiler/bin/Debug/net8.0/compiler.dll
+/home/pilid1337/ЯПы/compiler/bin/Debug/net8.0/compiler.pdb
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.dll
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/refint/compiler.dll
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.pdb
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.genruntimeconfig.cache
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/ref/compiler.dll
