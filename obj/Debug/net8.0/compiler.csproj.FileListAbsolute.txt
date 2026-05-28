@@ -12,3 +12,4 @@
 /home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.pdb
 /home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.genruntimeconfig.cache
 /home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/ref/compiler.dll
+/home/pilid1337/ЯПы/compiler/obj/Debug/net8.0/compiler.sourcelink.json

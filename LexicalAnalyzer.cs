@@ -1,165 +1,268 @@
-﻿// class LexicalAnalyzer
-// {
-//     public const byte
-//         star = 21, // *
-//         slash = 60, // /
-//         equal = 16, // =
-//         comma = 20, // ,
-//         semicolon = 14, // ;
-//         colon = 5, // :
-//         point = 61,	// .
-//         arrow = 62,	// ^
-//         leftpar = 9,	// (
-//         rightpar = 4,	// )
-//         lbracket = 11,	// [
-//         rbracket = 12,	// ]
-//         flpar = 63,	// {
-//         frpar = 64,	// }
-//         later = 65,	// <
-//         greater = 66,	// >
-//         laterequal = 67,	//  <=
-//         greaterequal = 68,	//  >=
-//         latergreater = 69,	//  <>
-//         plus = 70,	// +
-//         minus = 71,	// –
-//         lcomment = 72,	//  (*
-//         rcomment = 73,	//  *)
-//         assign = 51,	//  :=
-//         twopoints = 74,	//  ..
-//         ident = 2,	// идентификатор
-//         floatc = 82,	// вещественная константа
-//         intc = 15,	// целая константа
-//         casesy = 31,
-//         elsesy = 32,
-//         filesy = 57,
-//         gotosy = 33,
-//         thensy = 52,
-//         typesy = 34,
-//         untilsy = 53,
-//         dosy = 54,
-//         withsy = 37,
-//         ifsy = 56,
-//         insy = 100,
-//         ofsy = 101,
-//         orsy = 102,
-//         tosy = 103,
-//         endsy = 104,
-//         varsy = 105,
-//         divsy = 106,
-//         andsy = 107,
-//         notsy = 108,
-//         forsy = 109,
-//         modsy = 110,
-//         nilsy = 111,
-//         setsy = 112,
-//         beginsy = 113,
-//         whilesy = 114,
-//         arraysy = 115,
-//         constsy = 116,
-//         labelsy = 117,
-//         downtosy = 118,
-//         packedsy = 119,
-//         recordsy = 120,
-//         repeatsy = 121,
-//         programsy = 122,
-//         functionsy = 123,
-//         procedurensy = 124;
+﻿using System;
 
-//     byte symbol; // код символа
-//     TextPosition token; // позиция символа
-//     string addrName; // адрес идентификатора в таблице имен
-//     int nmb_int; // значение целой константы
-//     float nmb_float; // значение вещественной константы
-//     char one_symbol; // значение символьной константы
-
-//     byte NextSym()
-//     {
-//         while (InputOutput.Ch == ' ') InputOutput.NextCh();
-//         token.lineNumber = InputOutput.positionNow.lineNumber;
-//         token.charNumber = InputOutput.positionNow.charNumber;
-
-//         //сканировать символ
-//         switch (InputOutput.Ch)
-//         {
-//             //case < буква > :
-//             //    сканировать идентификатор или ключевое слово;
-//             //break;
-//             case <цифра>:
-//                 byte digit;
-//                 Int16 maxint = Int16.MaxValue;
-//                 nmb_int = 0;
-//                 while (InputOutput.Ch >= '0' && InputOutput.Ch <= '9')
-//                 {
-//                     digit = (byte)(InputOutput.Ch - '0');
-//                     if (nmb_int < maxint / 10 ||
-//                     (nmb_int == maxint / 10 &&
-//                     digit <= maxint % 10))
-//                         nmb_int = 10 * nmb_int + digit;
-//                     else
-//                     {
-//                         // константа превышает предел
-//                         InputOutput.Error(203, InputOutput.positionNow);
-//                         nmb_int = 0;
-//                         while (InputOutput.Ch >= '0' && InputOutput.Ch <= '9') InputOutput.NextCh();
-//                     }
-//                     InputOutput.NextCh();
-//                 }
-//                 symbol = intc;
-//                 break;
-//             case <буква>:
-//                 string name = "";
-//                 while  ((InputOutput.Ch >= 'a' && InputOutput.Ch <= 'z') ||
-//                         (InputOutput.Ch >= 'A' && InputOutput.Ch <= 'Z') ||
-//                         (InputOutput.Ch >= '0' && InputOutput.Ch <= '9'))
-//                         {
-//                             name += InputOutput.Ch;
-//                             InputOutput.NextCh();
-//                         }
-//                 //symbol = код идентификатора или код ключевого слова
-//                 break;
-//             //case '/'' :
-//             //        сканировать символьную константу;
-//             //    break;
-//             case '<':
-//                 InputOutput.NextCh();
-//                 if (InputOutput.Ch == '=')
-//                 {
-//                     symbol = laterequal; InputOutput.NextCh();
-//                 }
-//                 else
-//                 if (InputOutput.Ch == '>')
-//                 {
-//                     symbol = latergreater; InputOutput.NextCh();
-//                 }
-//                 else
-//                     symbol = later;
-//                 break;
-//             case ':':
-//                 InputOutput.NextCh();
-//                 if (InputOutput.Ch == '=')
-//                 {
-//                     symbol = assign; InputOutput.NextCh();
-//                 }
-//                 else
-//                     symbol = colon;
-//                 break;
-//             case ';':
-//                 symbol = semicolon;
-//                 InputOutput.NextCh();
-//                 break;
-//             case '.':
-//                 InputOutput.NextCh();
-//                 if (InputOutput.Ch == '.')
-//                 {
-//                     symbol = twopoints; InputOutput.NextCh();
-//                 }
-//                 else symbol = point;
-//                 break;
-//             }
+class LexicalAnalyzer
+{
+    public const byte ident = 1;
+    public const byte intc = 2;
+    
+    public const byte dosy = 3; public const byte ifsy = 4; public const byte insy = 5;
+    public const byte ofsy = 6; public const byte orsy = 7; public const byte tosy = 8;
+    
+    public const byte endsy = 9; public const byte varsy = 10; public const byte divsy = 11;
+    public const byte andsy = 12; public const byte notsy = 13; public const byte forsy = 14;
+    public const byte modsy = 15; public const byte nilsy = 16; public const byte setsy = 17;
+    
+    public const byte thensy = 18; public const byte elsesy = 19; public const byte casesy = 20;
+    public const byte filesy = 21; public const byte gotosy = 22; public const byte typesy = 23;
+    public const byte withsy = 24;
+    
+    public const byte beginsy = 25; public const byte whilesy = 26; public const byte arraysy = 27;
+    public const byte constsy = 28; public const byte labelsy = 29; public const byte untilsy = 30;
+    
+    public const byte downtosy = 31; public const byte packedsy = 32; public const byte recordsy = 33;
+    public const byte repeatsy = 34;
+    
+    public const byte programsy = 35; public const byte functionsy = 36; public const byte procedurensy = 37;
 
 
-//         return symbol;
-//     }
+    public const byte leftpar = 38;      // (
+    public const byte rightpar = 39;     // )
+    public const byte slash = 40;        // /
+    public const byte semicolon = 41;    // ;
+    public const byte comma = 42;        // ,
+    public const byte equal = 43;        // =
+    public const byte plus = 44;         // +
+    public const byte minus = 45;        // -
+    public const byte star = 46;         // *
+    public const byte lbracket = 47;     // [
+    public const byte rbracket = 48;     // ]
+    public const byte arrow = 49;        // ^
+    public const byte assign = 50;       // :=
+    public const byte colon = 51;        // :
+    public const byte point = 52;        // .
+    public const byte twopoints = 53;    // ..
+    public const byte later = 54;        // <
+    public const byte greater = 55;      // >
+    public const byte laterequal = 56;   // <=
+    public const byte greaterequal = 57;  // >=
+    public const byte latergreater = 58; // <>
+    
+    public const byte eofsym = 99;
 
 
-// }
+    private static byte _symbol;
+    private static TextPosition _token;
+    private static string _addrName;
+    private static int _nmbInt;
+    private static bool _isEof = false;
+
+    private static Keywords _keywords = new Keywords();
+
+
+    public static byte Symbol => _symbol;
+    public static TextPosition Token => _token;
+    public static string AddrName => _addrName;
+    public static int NmbInt => _nmbInt;
+
+
+    private static void Advance()
+    {
+        if (!_isEof)
+        {
+            if (!InputOutput.NextCh())
+            {
+                _isEof = true;
+            }
+        }
+    }
+
+    public static byte NextSym()
+    {
+        while (!_isEof)
+        {
+            if (InputOutput.Ch == ' ' || InputOutput.Ch == '\t')
+            {
+                Advance();
+                continue;
+            }
+
+            if (InputOutput.Ch == '{')
+            {
+                Advance();
+                while (!_isEof && InputOutput.Ch != '}')
+                {
+                    Advance();
+                }
+                Advance();
+                continue;
+            }
+
+            if (InputOutput.Ch == '(')
+            {
+                TextPosition startPos = InputOutput.PositionNow;
+                Advance();
+                if (!_isEof && InputOutput.Ch == '*')
+                {
+                    Advance();
+                    bool foundEnd = false;
+                    while (!_isEof && !foundEnd)
+                    {
+                        if (InputOutput.Ch == '*')
+                        {
+                            Advance();
+                            if (!_isEof && InputOutput.Ch == ')')
+                            {
+                                Advance();
+                                foundEnd = true;
+                            }
+                        }
+                        else
+                        {
+                            Advance();
+                        }
+                    }
+                    continue;
+                }
+                else
+                {
+                    _token = startPos;
+                    _symbol = leftpar;
+                    return _symbol;
+                }
+            }
+
+            if (InputOutput.Ch == '/')
+            {
+                TextPosition startPos = InputOutput.PositionNow;
+                Advance();
+                if (!_isEof && InputOutput.Ch == '/')
+                {
+                    uint currentLine = InputOutput.PositionNow.LineNumber;
+                    while (!_isEof && InputOutput.PositionNow.LineNumber == currentLine)
+                    {
+                        Advance();
+                    }
+                    continue;
+                }
+                else
+                {
+                    _token = startPos;
+                    _symbol = slash;
+                    return _symbol;
+                }
+            }
+
+            break;
+        }
+
+        if (_isEof)
+        {
+            _symbol = eofsym;
+            return _symbol;
+        }
+
+        _token = InputOutput.PositionNow;
+        char ch = InputOutput.Ch;
+
+        if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))
+        {
+            _addrName = "";
+            while (!_isEof && ((InputOutput.Ch >= 'a' && InputOutput.Ch <= 'z') || 
+                               (InputOutput.Ch >= 'A' && InputOutput.Ch <= 'Z') || 
+                               (InputOutput.Ch >= '0' && InputOutput.Ch <= '9')))
+            {
+                _addrName += InputOutput.Ch;
+                Advance();
+            }
+
+            string lowerName = _addrName.ToLower();
+            byte len = (byte)lowerName.Length;
+
+            if (_keywords.Kw.ContainsKey(len) && _keywords.Kw[len].ContainsKey(lowerName))
+            {
+                _symbol = _keywords.Kw[len][lowerName];
+            }
+            else
+            {
+                _symbol = ident;
+            }
+            return _symbol;
+        }
+
+        if (ch >= '0' && ch <= '9')
+        {
+            int maxInt = 32767;
+            _nmbInt = 0;
+            bool overflow = false;
+            TextPosition numPos = InputOutput.PositionNow;
+
+            while (!_isEof && InputOutput.Ch >= '0' && InputOutput.Ch <= '9')
+            {
+                byte digit = (byte)(InputOutput.Ch - '0');
+                if (!overflow)
+                {
+                    if (_nmbInt < maxInt / 10 || (_nmbInt == maxInt / 10 && digit <= maxInt % 10))
+                    {
+                        _nmbInt = 10 * _nmbInt + digit;
+                    }
+                    else
+                    {
+                        InputOutput.Error(11, numPos);
+                        _nmbInt = 0;
+                        overflow = true;
+                    }
+                }
+                Advance();
+            }
+            _symbol = intc;
+            return _symbol;
+        }
+
+
+        switch (ch)
+        {
+            case '<':
+                Advance();
+                if (!_isEof && InputOutput.Ch == '=') { Advance(); _symbol = laterequal; }
+                else if (!_isEof && InputOutput.Ch == '>') { Advance(); _symbol = latergreater; }
+                else _symbol = later;
+                break;
+
+            case '>':
+                Advance();
+                if (!_isEof && InputOutput.Ch == '=') { Advance(); _symbol = greaterequal; }
+                else _symbol = greater;
+                break;
+
+            case ':':
+                Advance();
+                if (!_isEof && InputOutput.Ch == '=') { Advance(); _symbol = assign; }
+                else _symbol = colon;
+                break;
+
+            case '.':
+                Advance();
+                if (!_isEof && InputOutput.Ch == '.') { Advance(); _symbol = twopoints; }
+                else _symbol = point;
+                break;
+
+            case ';': Advance(); _symbol = semicolon; break;
+            case ',': Advance(); _symbol = comma; break;
+            case '=': Advance(); _symbol = equal; break;
+            case '+': Advance(); _symbol = plus; break;
+            case '-': Advance(); _symbol = minus; break;
+            case '*': Advance(); _symbol = star; break;
+            case ')': Advance(); _symbol = rightpar; break;
+            case '[': Advance(); _symbol = lbracket; break;
+            case ']': Advance(); _symbol = rbracket; break;
+            case '^': Advance(); _symbol = arrow; break;
+
+            default:
+                InputOutput.Error(5, InputOutput.PositionNow);
+                Advance();
+                return NextSym();
+        }
+
+        return _symbol;
+    }
+}

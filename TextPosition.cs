@@ -1,11 +1,23 @@
 struct TextPosition
 {
-    public uint _lineNumber;
-    public byte _charNumber;
+    private uint _lineNumber;
+    private byte _charNumber;
+
+    public uint LineNumber 
+    {
+        get;
+        set;
+    }
+
+    public byte CharNumber
+    {
+        get;
+        set;
+    }
 
     public TextPosition(uint ln = 0, byte c = 0)
     {
-        _lineNumber = ln;
-        _charNumber = c;
+        LineNumber = ln;
+        CharNumber = c;
     }
 }

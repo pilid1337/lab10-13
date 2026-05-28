@@ -1,26 +1,23 @@
-﻿class Program
+﻿using System;
+using System.IO;
+
+class Program
 {
     static void Main()
     {
         string filePath = Program.ReadFilePath("Введите имя файла для компиляции: ");
-        Random rnd = new Random();
-        uint lNum = 0;
+        string outPath = Program.ReadFilePath("Введите имя файла для сохранения: ");
 
         if (InputOutput.Init(filePath))
         {
-            while (InputOutput.NextCh())
+            using (StreamWriter writer = new StreamWriter(outPath))
             {
-                if (InputOutput._ch == '_')
+                InputOutput.NextCh(); 
+                
+                byte sym;
+                while ((sym = LexicalAnalyzer.NextSym()) != LexicalAnalyzer.eofsym)
                 {
-                    InputOutput.Error(1, InputOutput._positionNow);
-                }
-                if (InputOutput._ch == ';')
-                {
-                    InputOutput.Error(2, InputOutput._positionNow);
-                }
-                if (InputOutput._ch == '=')
-                {
-                    InputOutput.Error(3, InputOutput._positionNow);
+                    writer.WriteLine($"{sym} {LexicalAnalyzer.Token.LineNumber} {LexicalAnalyzer.Token.CharNumber}");
                 }
             }
         }
@@ -28,8 +25,6 @@
         {
             Console.WriteLine("Ошибка инициализации модуля ввода-вывода");
         }
-
-        
     }
 
     private static string ReadFilePath(string prompt)

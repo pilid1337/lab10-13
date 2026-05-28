@@ -1,12 +1,12 @@
 ﻿class InputOutput
 {
     const byte _errMax = 9;
-    public static char _ch
+    public static char Ch
     { 
         get; 
         set;
     }
-    public static TextPosition _positionNow;
+    public static TextPosition PositionNow;
     static string _line;
     static byte _lastInLine;
     public static List<Err> _err;
@@ -18,7 +18,7 @@
     {
         if (File.Exists(filePath))
         {
-            _positionNow = new TextPosition();
+            PositionNow = new TextPosition();
             _line = "";
             _lastInLine = 0;
             _err = new List<Err>();
@@ -46,8 +46,7 @@
     }
     static public bool NextCh()
     {
-        bool ans = false;
-        if (_positionNow._charNumber == _lastInLine)
+        if (PositionNow.CharNumber == _lastInLine)
         {
             ListThisLine();
 
@@ -58,23 +57,23 @@
 
             if (ReadNextLine())
             {
-                _positionNow._lineNumber++;
-                _positionNow._charNumber = 0;
-                ans = true;
+                PositionNow.LineNumber++;
+                PositionNow.CharNumber = 0;
+                Ch = _line[PositionNow.CharNumber];
+                return true;
             }
             else
             {
-                ans = false;
+                Ch = '\0';
+                return false;
             }
         }
         else 
         {
-            ++_positionNow._charNumber;
-            ans = true;
+            ++PositionNow.CharNumber;
+            Ch = _line[PositionNow.CharNumber];
+            return true;
         }
-
-        _ch = _line[_positionNow._charNumber];
-        return ans;
     }
 
     private static void ListThisLine()
@@ -106,7 +105,6 @@
 
     static void ListErrors()
     {
-        int pos = 7 - $"{_positionNow._lineNumber} ".Length;
         string s;
         foreach (Err item in _err)
         {
@@ -117,11 +115,13 @@
                 s += "0";
             }
             s += $"{_errCount}**";
-            while (s.Length - 1 < pos + item._errorPosition._charNumber) 
+
+            while (s.Length < 6 + item.ErrorPosition.CharNumber) 
             {
                 s += " ";
             }
-            s += $"^ ошибка: {_errorTable[item._errorCode]}";
+            
+            s += $"^ ошибка: {_errorTable[item.ErrorCode]}";
             Console.WriteLine(s);
         }
     }

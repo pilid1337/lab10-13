@@ -1,11 +1,23 @@
 struct Err
 {
-    public TextPosition _errorPosition;
-    public byte _errorCode;
-    
+    private TextPosition _errorPosition;
+    private byte _errorCode;
+
+    public TextPosition ErrorPosition 
+    {
+        get;
+        set;
+    }
+
+    public byte ErrorCode
+    {
+        get;
+        set;
+    }
+
     public Err(TextPosition _errorPosition, byte _errorCode)
     {
-        this._errorPosition = _errorPosition;
-        this._errorCode = _errorCode;
+        ErrorPosition = _errorPosition;
+        ErrorCode = _errorCode;
     }
 }
