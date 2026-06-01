@@ -17,7 +17,7 @@ class Program
                 byte sym;
                 while ((sym = LexicalAnalyzer.NextSym()) != LexicalAnalyzer.eofsym)
                 {
-                    writer.WriteLine($"{sym} {LexicalAnalyzer.Token.LineNumber} {LexicalAnalyzer.Token.CharNumber}");
+                    writer.Write($"{sym} ");
                 }
             }
         }

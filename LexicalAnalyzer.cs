@@ -25,27 +25,28 @@ class LexicalAnalyzer
     public const byte programsy = 35; public const byte functionsy = 36; public const byte procedurensy = 37;
 
 
-    public const byte leftpar = 38;      // (
-    public const byte rightpar = 39;     // )
-    public const byte slash = 40;        // /
-    public const byte semicolon = 41;    // ;
-    public const byte comma = 42;        // ,
-    public const byte equal = 43;        // =
-    public const byte plus = 44;         // +
-    public const byte minus = 45;        // -
-    public const byte star = 46;         // *
-    public const byte lbracket = 47;     // [
-    public const byte rbracket = 48;     // ]
-    public const byte arrow = 49;        // ^
-    public const byte assign = 50;       // :=
-    public const byte colon = 51;        // :
-    public const byte point = 52;        // .
-    public const byte twopoints = 53;    // ..
-    public const byte later = 54;        // <
-    public const byte greater = 55;      // >
-    public const byte laterequal = 56;   // <=
-    public const byte greaterequal = 57;  // >=
-    public const byte latergreater = 58; // <>
+    public const byte leftpar = 38;
+    public const byte rightpar = 39;
+    public const byte slash = 40;
+    public const byte semicolon = 41;
+    public const byte comma = 42;
+    public const byte equal = 43;
+    public const byte plus = 44;
+    public const byte minus = 45;
+    public const byte star = 46;
+    public const byte lbracket = 47;
+    public const byte rbracket = 48;
+    public const byte arrow = 49;       
+    public const byte assign = 50;       
+    public const byte colon = 51;        
+    public const byte point = 52;        
+    public const byte twopoints = 53;    
+    public const byte later = 54;        
+    public const byte greater = 55;      
+    public const byte laterequal = 56;   
+    public const byte greaterequal = 57;  
+    public const byte latergreater = 58;
+    public const byte stringc = 83;
     
     public const byte eofsym = 99;
 
@@ -62,7 +63,14 @@ class LexicalAnalyzer
     public static byte Symbol => _symbol;
     public static TextPosition Token => _token;
     public static string AddrName => _addrName;
-    public static int NmbInt => _nmbInt;
+    public static Int32 NmbInt => _nmbInt;
+
+    private static TextPosition _parPos;
+    private static TextPosition _stringcPos;
+    private static bool _stringcOpen = false;
+    private static int _parLevel = 0;
+    private static bool _foundEnd = true;
+
 
 
     private static void Advance()
@@ -78,6 +86,7 @@ class LexicalAnalyzer
 
     public static byte NextSym()
     {
+        uint currentLine = 0;
         while (!_isEof)
         {
             if (InputOutput.Ch == ' ' || InputOutput.Ch == '\t')
@@ -88,10 +97,23 @@ class LexicalAnalyzer
 
             if (InputOutput.Ch == '{')
             {
+                _foundEnd = false;
+                TextPosition startPos = InputOutput.PositionNow;
                 Advance();
-                while (!_isEof && InputOutput.Ch != '}')
+                while (!_isEof && !_foundEnd)
                 {
-                    Advance();
+                    if (InputOutput.Ch == '}')
+                    {
+                        _foundEnd = true;
+                    }
+                    else
+                    {
+                        Advance();
+                    }
+                }
+                if (_isEof && !_foundEnd)
+                {
+                    InputOutput.Error(6, startPos);
                 }
                 Advance();
                 continue;
@@ -104,8 +126,8 @@ class LexicalAnalyzer
                 if (!_isEof && InputOutput.Ch == '*')
                 {
                     Advance();
-                    bool foundEnd = false;
-                    while (!_isEof && !foundEnd)
+                    _foundEnd = false;
+                    while (!_isEof && !_foundEnd)
                     {
                         if (InputOutput.Ch == '*')
                         {
@@ -113,7 +135,7 @@ class LexicalAnalyzer
                             if (!_isEof && InputOutput.Ch == ')')
                             {
                                 Advance();
-                                foundEnd = true;
+                                _foundEnd = true;
                             }
                         }
                         else
@@ -121,10 +143,16 @@ class LexicalAnalyzer
                             Advance();
                         }
                     }
+                    if (_isEof && !_foundEnd)
+                    {
+                        InputOutput.Error(6, startPos);
+                    }
                     continue;
                 }
                 else
                 {
+                    _parPos = startPos;
+                    _parLevel++;
                     _token = startPos;
                     _symbol = leftpar;
                     return _symbol;
@@ -137,7 +165,7 @@ class LexicalAnalyzer
                 Advance();
                 if (!_isEof && InputOutput.Ch == '/')
                 {
-                    uint currentLine = InputOutput.PositionNow.LineNumber;
+                    currentLine = InputOutput.PositionNow.LineNumber;
                     while (!_isEof && InputOutput.PositionNow.LineNumber == currentLine)
                     {
                         Advance();
@@ -157,7 +185,20 @@ class LexicalAnalyzer
 
         if (_isEof)
         {
+            if (_parLevel > 0)
+            {
+                InputOutput.Error(7, _parPos);
+            }
+            if (_stringcOpen)
+            {
+                InputOutput.Error(8, _stringcPos);
+            }
+
+            InputOutput.ListErrors();
+
             _symbol = eofsym;
+
+            InputOutput.End();
             return _symbol;
         }
 
@@ -191,21 +232,19 @@ class LexicalAnalyzer
 
         if (ch >= '0' && ch <= '9')
         {
-            int maxInt = 32767;
+            Int32 maxInt = 32767;
             _nmbInt = 0;
             bool overflow = false;
             TextPosition numPos = InputOutput.PositionNow;
+            byte digit = 0;
 
             while (!_isEof && InputOutput.Ch >= '0' && InputOutput.Ch <= '9')
             {
-                byte digit = (byte)(InputOutput.Ch - '0');
+                digit = (byte)(InputOutput.Ch - '0');
                 if (!overflow)
                 {
-                    if (_nmbInt < maxInt / 10 || (_nmbInt == maxInt / 10 && digit <= maxInt % 10))
-                    {
-                        _nmbInt = 10 * _nmbInt + digit;
-                    }
-                    else
+                    _nmbInt = 10 * _nmbInt + digit;
+                    if (_nmbInt > maxInt)
                     {
                         InputOutput.Error(11, numPos);
                         _nmbInt = 0;
@@ -223,39 +262,141 @@ class LexicalAnalyzer
         {
             case '<':
                 Advance();
-                if (!_isEof && InputOutput.Ch == '=') { Advance(); _symbol = laterequal; }
-                else if (!_isEof && InputOutput.Ch == '>') { Advance(); _symbol = latergreater; }
-                else _symbol = later;
+                if (!_isEof && InputOutput.Ch == '=') 
+                { 
+                    Advance(); _symbol = laterequal; 
+                }
+                else if (!_isEof && InputOutput.Ch == '>') 
+                { 
+                    Advance(); _symbol = latergreater; 
+                }
+                else 
+                {
+                    _symbol = later;
+                }
                 break;
 
             case '>':
                 Advance();
-                if (!_isEof && InputOutput.Ch == '=') { Advance(); _symbol = greaterequal; }
-                else _symbol = greater;
+                if (!_isEof && InputOutput.Ch == '=') 
+                { 
+                    Advance(); _symbol = greaterequal; 
+                }
+                else 
+                {
+                    _symbol = greater;
+                }
                 break;
 
             case ':':
                 Advance();
-                if (!_isEof && InputOutput.Ch == '=') { Advance(); _symbol = assign; }
-                else _symbol = colon;
+                if (!_isEof && InputOutput.Ch == '=') 
+                { 
+                    Advance(); _symbol = assign; 
+                }
+                else 
+                {
+                    _symbol = colon;
+                }
                 break;
 
             case '.':
                 Advance();
-                if (!_isEof && InputOutput.Ch == '.') { Advance(); _symbol = twopoints; }
-                else _symbol = point;
+                if (!_isEof && InputOutput.Ch == '.') 
+                { 
+                    Advance(); _symbol = twopoints; 
+                }
+                else 
+                {
+                    _symbol = point;
+                }
                 break;
 
-            case ';': Advance(); _symbol = semicolon; break;
-            case ',': Advance(); _symbol = comma; break;
-            case '=': Advance(); _symbol = equal; break;
-            case '+': Advance(); _symbol = plus; break;
-            case '-': Advance(); _symbol = minus; break;
-            case '*': Advance(); _symbol = star; break;
-            case ')': Advance(); _symbol = rightpar; break;
-            case '[': Advance(); _symbol = lbracket; break;
-            case ']': Advance(); _symbol = rbracket; break;
-            case '^': Advance(); _symbol = arrow; break;
+            case ';': 
+                Advance(); 
+                _symbol = semicolon; 
+                break;
+            case ',': 
+                Advance(); 
+                _symbol = comma; 
+                break;
+            case '=': 
+                Advance(); 
+                _symbol = equal; 
+                break;
+            case '+': 
+                Advance(); 
+                _symbol = plus; 
+                break;
+            case '-': 
+                Advance(); 
+                _symbol = minus; 
+                break;
+            case '*': 
+                Advance(); 
+                _symbol = star; 
+                break;
+            case ')': 
+                Advance(); 
+                _symbol = rightpar; 
+                if (_parLevel > 0)
+                {
+                    _parLevel--;
+                }  
+                else
+                {
+                    InputOutput.Error(9, InputOutput.PositionNow);
+                }
+                break;
+            case '[': 
+                Advance(); 
+                _symbol = lbracket; 
+                break;
+            case ']': 
+                Advance(); 
+                _symbol = rbracket; 
+                break;
+            case '^': 
+                Advance(); 
+                _symbol = arrow; 
+                break;
+            
+            case '\'':
+                TextPosition stringStartPos = InputOutput.PositionNow;
+                uint startLine = stringStartPos.LineNumber;
+
+                Advance();
+                bool isClosed = false;
+
+                do
+                {
+                    if (InputOutput.Ch == '\'')
+                    {
+                        Advance();
+
+                        if (InputOutput.PositionNow.LineNumber == startLine && InputOutput.Ch == '\'')
+                        {
+                            Advance(); 
+                        }
+                        else
+                        {
+                            isClosed = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        Advance();
+                    }
+                } while (InputOutput.PositionNow.LineNumber == startLine);
+
+                if (!isClosed)
+                {
+                    InputOutput.Error(8, stringStartPos);
+                }
+
+                _symbol = stringc; 
+                break;
 
             default:
                 InputOutput.Error(5, InputOutput.PositionNow);

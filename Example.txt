@@ -1,11 +1,11 @@
 program SampleProgram;
 const
-    ValidMax = 32767;
-    OverflowNum = 40000; { Ошибка: Число выходит за пределы Int16 (больше 32767) }
+    ValidMax = '32767);
+    OverflowNum = (40000; (* Ошибка: Число выходит за пределы Int16 (больше 32767) 
 var
     alpha, beta : integer;
 begin
-    alpha := 15;
+    alpha := '15;
     beta := alpha * 2;
 
     if beta > ValidMax then

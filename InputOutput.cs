@@ -6,13 +6,18 @@
         get; 
         set;
     }
-    public static TextPosition PositionNow;
+    public static TextPosition PositionNow 
+    { 
+        get; 
+        set; 
+    }
     static string _line;
     static byte _lastInLine;
     public static List<Err> _err;
     static StreamReader _file;
     static Dictionary<int, string> _errorTable;
     static uint _errCount;
+
 
     static public bool Init(string filePath)
     {
@@ -46,6 +51,7 @@
     }
     static public bool NextCh()
     {
+        TextPosition pos = PositionNow;
         if (PositionNow.CharNumber == _lastInLine)
         {
             ListThisLine();
@@ -57,8 +63,10 @@
 
             if (ReadNextLine())
             {
-                PositionNow.LineNumber++;
-                PositionNow.CharNumber = 0;
+                pos = PositionNow;
+                pos.LineNumber++;
+                pos.CharNumber = 0;
+                PositionNow = pos;
                 Ch = _line[PositionNow.CharNumber];
                 return true;
             }
@@ -70,7 +78,9 @@
         }
         else 
         {
-            ++PositionNow.CharNumber;
+            pos = PositionNow;
+            ++pos.CharNumber;
+            PositionNow = pos;
             Ch = _line[PositionNow.CharNumber];
             return true;
         }
@@ -88,22 +98,21 @@
             _line = _file.ReadLine();
             if (!string.IsNullOrWhiteSpace(_line))
             {
+                Ch = '\n';
                 _err = new List<Err>();
                 _lastInLine = (byte)(_line.Length - 1);
                 return true;
             }
         }
-
-        End();
         return false;
     }
 
-    static void End()
+    public static void End()
     {
         Console.WriteLine($"Компиляция завершена. Ошибок — {_errCount}!");
     }
 
-    static void ListErrors()
+    public static void ListErrors()
     {
         string s;
         foreach (Err item in _err)
