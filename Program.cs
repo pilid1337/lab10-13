@@ -6,20 +6,11 @@ class Program
     static void Main()
     {
         string filePath = Program.ReadFilePath("Введите имя файла для компиляции: ");
-        string outPath = Program.ReadFilePath("Введите имя файла для сохранения: ");
 
         if (InputOutput.Init(filePath))
         {
-            using (StreamWriter writer = new StreamWriter(outPath))
-            {
-                InputOutput.NextCh(); 
-                
-                byte sym;
-                while ((sym = LexicalAnalyzer.NextSym()) != LexicalAnalyzer.eofsym)
-                {
-                    writer.Write($"{sym} ");
-                }
-            }
+            InputOutput.NextCh();
+            SyntaxAnalyzer.Analyze();
         }
         else
         {

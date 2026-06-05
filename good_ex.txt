@@ -1,0 +1,35 @@
+program PerfectProgram;
+var
+    alpha, beta : integer;
+    gamma : real;
+    flag : boolean;
+    arr : array [1..10] of integer;
+begin
+    { 1. Инициализация простых переменных }
+    alpha := 5;
+    beta := alpha * 2 + 3;
+    
+    { Твой семантический анализ (TypesCompatible) разрешает real := integer. }
+    { Используем целое число, чтобы лексер не спотыкался о точку! }
+    gamma := 3;
+    
+    { 2. Работа с массивами (индекс строго целого типа) }
+    arr[2] := alpha;
+
+    { 3. Условный оператор if-then-else }
+    { flag у нас boolean, так что условие валидно для синтаксиса }
+    if flag then
+    begin
+        alpha := arr[2];
+    end
+    else
+    begin
+        alpha := 0;
+    end;
+
+    { 4. Оператор выбора case-of-end }
+    case alpha of
+        1: beta := 10;
+        5: beta := 20;
+    end;
+end.

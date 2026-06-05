@@ -1,307 +1,461 @@
-using System;
 using System.Collections.Generic;
 
 class SyntaxAnalyzer
 {
     private static byte _sym;
+    private static IdentifierTable _table;
 
-    // Синхронизирующие множества для восстановления после ошибок
-    private static readonly HashSet<byte> StatementSync = new HashSet<byte> 
-    { 
-        LexicalAnalyzer.semicolon, LexicalAnalyzer.endsy, LexicalAnalyzer.eofsym,
-        LexicalAnalyzer.ifsy, LexicalAnalyzer.whilesy, LexicalAnalyzer.beginsy
-    };
-
-    private static readonly HashSet<byte> DeclarationSync = new HashSet<byte>
-    {
-        LexicalAnalyzer.semicolon, LexicalAnalyzer.beginsy, LexicalAnalyzer.eofsym
-    };
-
-    public static void Parse()
-    {
-        NextToken();
-        
-        // Простейшая структура программы: Сначала переменные, потом блок кода
-        if (_sym == LexicalAnalyzer.varsy)
-        {
-            ParseVarDeclarations();
-        }
-
-        if (_sym == LexicalAnalyzer.beginsy)
-        {
-            ParseCompoundStatement();
-        }
-        else
-        {
-            Error(63); // Ожидался begin
-        }
-    }
-
-    private static void NextToken()
+    private static void NextSym()
     {
         _sym = LexicalAnalyzer.NextSym();
     }
 
-    private static void Error(byte errorCode)
+    private static void Accept(byte expected, byte errorCode)
     {
-        InputOutput.Error(errorCode, LexicalAnalyzer.Token);
-    }
-
-    private static bool Accept(byte expectedSym, byte errorCode)
-    {
-        if (_sym == expectedSym)
+        if (_sym == expected)
         {
-            NextToken();
-            return true;
+            NextSym();
         }
-        Error(errorCode);
-        return false;
-    }
-
-    // Нейтрализация ошибок (Panic Mode)
-    private static void SkipTo(HashSet<byte> syncTokens)
-    {
-        while (!syncTokens.Contains(_sym) && _sym != LexicalAnalyzer.eofsym)
+        else
         {
-            NextToken();
+            InputOutput.Error(errorCode, LexicalAnalyzer.Token);
         }
     }
 
-    // --- ОПИСАНИЕ ПЕРЕМЕННЫХ И МАССИВОВ ---
-    private static void ParseVarDeclarations()
+    private static void SkipTo(params byte[] stopSymbols)
     {
-        Accept(LexicalAnalyzer.varsy, 50); // Пропускаем var
+        bool found = false;
+        while (_sym != LexicalAnalyzer.eofsym && !found)
+        {
+            foreach (byte s in stopSymbols)
+            {
+                if (_sym == s)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                NextSym();
+            }
+        }
+    }
+
+    public static void Analyze()
+    {
+        _table = new IdentifierTable();
+        NextSym();
+        Program();
+    }
+    private static void Program()
+    {
+        Accept(LexicalAnalyzer.programsy, 12);
+        Accept(LexicalAnalyzer.ident, 13);
+        Accept(LexicalAnalyzer.semicolon, 14);
+
+        if (_sym == LexicalAnalyzer.constsy)
+        {
+            ConstDeclarations();
+        }
+
+        if (_sym == LexicalAnalyzer.varsy)
+        {
+            VarDeclarations();
+        }
+
+        CompoundStatement();
+        Accept(LexicalAnalyzer.point, 15);
+    }
+
+    private static void VarDeclarations()
+    {
+        Accept(LexicalAnalyzer.varsy, 16);
+
+        List<string> names = new List<string>();
+        string type = "";
 
         while (_sym == LexicalAnalyzer.ident)
         {
-            try
-            {
-                // Список переменных (a, b, c)
-                Accept(LexicalAnalyzer.ident, 50);
-                while (_sym == LexicalAnalyzer.comma)
-                {
-                    NextToken();
-                    Accept(LexicalAnalyzer.ident, 50);
-                }
-
-                Accept(LexicalAnalyzer.colon, 57); // Ожидаем ':'
-
-                // Разбор типа (простой или массив)
-                if (_sym == LexicalAnalyzer.arraysy)
-                {
-                    NextToken();
-                    Accept(LexicalAnalyzer.lbracket, 9); // Ожидаем '['
-                    Accept(LexicalAnalyzer.intc, 62);    // Левая граница
-                    Accept(LexicalAnalyzer.twopoints, 60); // Ожидаем '..'
-                    Accept(LexicalAnalyzer.intc, 62);    // Правая граница
-                    Accept(LexicalAnalyzer.rbracket, 59); // Ожидаем ']'
-                    Accept(LexicalAnalyzer.ofsy, 55);    // Ожидаем 'of'
-                    Accept(LexicalAnalyzer.ident, 61);   // Тип элементов массива
-                }
-                else if (_sym == LexicalAnalyzer.ident)
-                {
-                    NextToken(); // Простой тип (integer, char и т.д.)
-                }
-                else
-                {
-                    Error(61); // Ожидался тип
-                }
-
-                Accept(LexicalAnalyzer.semicolon, 52);
-            }
-            catch
-            {
-                // Если внутри объявления произошла каша, прыгаем к следующей строке или begin
-                SkipTo(DeclarationSync);
-                if (_sym == LexicalAnalyzer.semicolon) NextToken();
-            }
-        }
-    }
-
-    // --- ОПЕРАТОРЫ ---
-    private static void ParseStatement()
-    {
-        switch (_sym)
-        {
-            case LexicalAnalyzer.ident:
-                ParseAssignment();
-                break;
-            case LexicalAnalyzer.ifsy:
-                ParseIf();
-                break;
-            case LexicalAnalyzer.casesy:
-                ParseCase();
-                break;
-            case LexicalAnalyzer.beginsy:
-                ParseCompoundStatement();
-                break;
-            default:
-                // Пустой оператор или непредвиденный токен
-                break;
-        }
-    }
-
-    private static void ParseCompoundStatement()
-    {
-        Accept(LexicalAnalyzer.beginsy, 63);
-
-        ParseStatement();
-        while (_sym == LexicalAnalyzer.semicolon)
-        {
-            NextToken();
-            if (_sym == LexicalAnalyzer.endsy) break; // Защита от лишней точки с запятой перед end
-            ParseStatement();
-        }
-
-        if (!Accept(LexicalAnalyzer.endsy, 56))
-        {
-            SkipTo(StatementSync); // Нейтрализация: ищем следующий блок
-        }
-    }
-
-    private static void ParseAssignment()
-    {
-        Accept(LexicalAnalyzer.ident, 50);
-
-        // Поддержка элементов массива (a[i] := ...)
-        if (_sym == LexicalAnalyzer.lbracket)
-        {
-            NextToken();
-            ParseExpression();
-            Accept(LexicalAnalyzer.rbracket, 59);
-        }
-
-        if (Accept(LexicalAnalyzer.assign, 51))
-        {
-            ParseExpression();
-        }
-        else
-        {
-            SkipTo(StatementSync);
-        }
-    }
-
-    private static void ParseIf()
-    {
-        Accept(LexicalAnalyzer.ifsy, 0); // already checked
-        ParseExpression();
-        
-        if (Accept(LexicalAnalyzer.thensy, 53))
-        {
-            ParseStatement();
-            if (_sym == LexicalAnalyzer.elsesy)
-            {
-                NextToken();
-                ParseStatement();
-            }
-        }
-        else
-        {
-            SkipTo(StatementSync);
-        }
-    }
-
-    private static void ParseCase()
-    {
-        Accept(LexicalAnalyzer.casesy, 0);
-        ParseExpression();
-        Accept(LexicalAnalyzer.ofsy, 55);
-
-        while (_sym == LexicalAnalyzer.intc || _sym == LexicalAnalyzer.ident)
-        {
-            NextToken(); // Константа выбора
-            Accept(LexicalAnalyzer.colon, 57);
-            ParseStatement();
+            names = IdentifierList();
+            Accept(LexicalAnalyzer.colon, 17);
             
-            if (_sym == LexicalAnalyzer.semicolon)
+            type = ParseType();
+
+            foreach (string name in names)
             {
-                NextToken();
+                if (!_table.AddVariable(name, type ?? "unknown"))
+                {
+                    InputOutput.Error(23, LexicalAnalyzer.Token);
+                }
+            }
+
+            if (_sym != LexicalAnalyzer.semicolon)
+            {
+                InputOutput.Error(14, LexicalAnalyzer.Token);
+                SkipTo(LexicalAnalyzer.semicolon, LexicalAnalyzer.beginsy);
             }
             else
             {
-                break;
+                NextSym();
             }
         }
-
-        Accept(LexicalAnalyzer.endsy, 56);
     }
 
-    // --- АНАЛИЗ ВЫРАЖЕНИЙ ---
-    private static void ParseExpression()
+    private static List<string> IdentifierList()
     {
-        ParseSimpleExpression();
-
-        // Операции отношения (=, <>, <, >, <=, >=)
-        if (_sym == LexicalAnalyzer.equal || _sym == LexicalAnalyzer.latergreater ||
-            _sym == LexicalAnalyzer.later || _sym == LexicalAnalyzer.greater ||
-            _sym == LexicalAnalyzer.laterequal || _sym == LexicalAnalyzer.greaterequal)
+        List<string> names = new List<string>();
+        
+        if (_sym == LexicalAnalyzer.ident)
         {
-            NextToken();
-            ParseSimpleExpression();
+            names.Add(LexicalAnalyzer.AddrName);
+            NextSym();
+        }
+        else Accept(LexicalAnalyzer.ident, 13);
+
+        while (_sym == LexicalAnalyzer.comma)
+        {
+            NextSym();
+            if (_sym == LexicalAnalyzer.ident)
+            {
+                names.Add(LexicalAnalyzer.AddrName);
+                NextSym();
+            }
+            else Accept(LexicalAnalyzer.ident, 13);
+        }
+        return names;
+    }
+
+    private static string ParseType()
+    {
+        if (_sym == LexicalAnalyzer.arraysy)
+        {
+            NextSym();
+            Accept(LexicalAnalyzer.lbracket, 18);
+            Accept(LexicalAnalyzer.intc, 19);
+            Accept(LexicalAnalyzer.twopoints, 20);
+            Accept(LexicalAnalyzer.intc, 19);
+            Accept(LexicalAnalyzer.rbracket, 21);
+            Accept(LexicalAnalyzer.ofsy, 22);
+            string baseType = SimpleType();
+            return baseType != null ? "array_" + baseType : null;
+        }
+        else
+        {
+            return SimpleType();
         }
     }
 
-    private static void ParseSimpleExpression()
+    private static string SimpleType()
+    {
+        if (_sym == LexicalAnalyzer.ident)
+        {
+            string name = LexicalAnalyzer.AddrName.ToLower();
+            if (name == "integer" || name == "real" || name == "boolean")
+            {
+                NextSym();
+                return name;
+            }
+        }
+        InputOutput.Error(24, LexicalAnalyzer.Token);
+        NextSym();
+        return null;
+    }
+
+    private static void CompoundStatement()
+    {
+        Accept(LexicalAnalyzer.beginsy, 25);
+        StatementList();
+        Accept(LexicalAnalyzer.endsy, 26);
+    }
+
+    private static void StatementList()
+    {
+        Statement();
+        while (_sym == LexicalAnalyzer.semicolon || 
+              (_sym == LexicalAnalyzer.ident && _sym != LexicalAnalyzer.endsy) ||
+               _sym == LexicalAnalyzer.ifsy || _sym == LexicalAnalyzer.casesy || _sym == LexicalAnalyzer.beginsy)
+        {
+            if (_sym == LexicalAnalyzer.semicolon)
+            {
+                NextSym();
+            }
+            else
+            {
+                InputOutput.Error(14, LexicalAnalyzer.Token);
+            }
+            
+            if (_sym == LexicalAnalyzer.endsy || _sym == LexicalAnalyzer.untilsy) 
+            {
+                break;
+            }
+            Statement();
+        }
+    }
+
+    private static void Statement()
+    {
+        if (_sym == LexicalAnalyzer.ident)
+        {
+            TextPosition startPos = LexicalAnalyzer.Token;
+            string varType = ParseVariableAccess(out string varName);
+            
+            Accept(LexicalAnalyzer.assign, 27);
+            string exprType = Expression();
+
+            if (varType == null)
+            {
+                InputOutput.Error(28, startPos);
+            }
+            else if (exprType != null && !TypesCompatible(varType, exprType))
+            {
+                InputOutput.Error(29, startPos);
+            }
+        }
+        else if (_sym == LexicalAnalyzer.ifsy)
+        {
+            NextSym();
+            string condType = Expression();
+            if (condType != "boolean" && condType != "unknown")
+            {
+                InputOutput.Error(30, LexicalAnalyzer.Token);
+            }
+            
+            Accept(LexicalAnalyzer.thensy, 31);
+            Statement();
+            
+            if (_sym == LexicalAnalyzer.elsesy)
+            {
+                NextSym();
+                Statement();
+            }
+        }
+        else if (_sym == LexicalAnalyzer.casesy)
+        {
+            NextSym();
+            string exprType = Expression(); 
+            Accept(LexicalAnalyzer.ofsy, 22);
+            
+            while (_sym == LexicalAnalyzer.intc || _sym == LexicalAnalyzer.ident)
+            {
+                NextSym(); 
+                Accept(LexicalAnalyzer.colon, 17);
+                Statement();
+                
+                if (_sym == LexicalAnalyzer.semicolon) 
+                {
+                    NextSym();
+                }
+                else 
+                {
+                    break;
+                }
+            }
+            Accept(LexicalAnalyzer.endsy, 26);
+        }
+        else if (_sym == LexicalAnalyzer.beginsy)
+        {
+            CompoundStatement();
+        }
+        else if (_sym != LexicalAnalyzer.endsy && _sym != LexicalAnalyzer.semicolon && _sym != LexicalAnalyzer.eofsym)
+        {
+            InputOutput.Error(32, LexicalAnalyzer.Token);
+            SkipTo(LexicalAnalyzer.semicolon, LexicalAnalyzer.endsy);
+        }
+    }
+
+    private static string ParseVariableAccess(out string name)
+    {
+        name = LexicalAnalyzer.AddrName;
+        string type = _table.GetVariableType(name);
+        Accept(LexicalAnalyzer.ident, 13);
+
+        if (_sym == LexicalAnalyzer.lbracket)
+        {
+            NextSym();
+            string indexType = Expression();
+            if (indexType != "integer" && indexType != "unknown")
+            {
+                InputOutput.Error(33, LexicalAnalyzer.Token);
+            }
+            Accept(LexicalAnalyzer.rbracket, 21);
+
+            if (type != null && type.StartsWith("array_"))
+            {
+                return type.Substring(6);
+            }
+            else if (type != null)
+            {
+                InputOutput.Error(34, LexicalAnalyzer.Token);
+                return "unknown";
+            }
+        }
+        
+        return type;
+    }
+
+    private static string Expression()
+    {
+        string leftType = SimpleExpression();
+
+        if (_sym == LexicalAnalyzer.equal || _sym == LexicalAnalyzer.later ||
+            _sym == LexicalAnalyzer.greater || _sym == LexicalAnalyzer.laterequal ||
+            _sym == LexicalAnalyzer.greaterequal || _sym == LexicalAnalyzer.latergreater)
+        {
+            NextSym();
+            string rightType = SimpleExpression();
+            return "boolean";
+        }
+        return leftType;
+    }
+
+    private static string SimpleExpression()
     {
         if (_sym == LexicalAnalyzer.plus || _sym == LexicalAnalyzer.minus)
         {
-            NextToken();
+            NextSym();
         }
-        
-        ParseTerm();
+
+        string type = Term();
+        string rightType = "";
+        byte op = 0;
 
         while (_sym == LexicalAnalyzer.plus || _sym == LexicalAnalyzer.minus || _sym == LexicalAnalyzer.orsy)
         {
-            NextToken();
-            ParseTerm();
+            op = _sym;
+            NextSym();
+            rightType = Term();
+            
+            if (op == LexicalAnalyzer.orsy) 
+            {
+                type = "boolean";
+            }
+            else 
+            {
+                type = MergeTypes(type, rightType);
+            }
         }
+        return type;
     }
 
-    private static void ParseTerm()
+    private static string Term()
     {
-        ParseFactor();
+        string type = Factor();
+
+        string rightType = "";
+        byte op = 0;
 
         while (_sym == LexicalAnalyzer.star || _sym == LexicalAnalyzer.slash || 
                _sym == LexicalAnalyzer.divsy || _sym == LexicalAnalyzer.modsy || 
                _sym == LexicalAnalyzer.andsy)
         {
-            NextToken();
-            ParseFactor();
+            op = _sym;
+            NextSym();
+            rightType = Factor();
+            
+            if (op == LexicalAnalyzer.andsy) 
+            {
+                type = "boolean";
+            }
+            else 
+            {
+                type = MergeTypes(type, rightType);
+            }
         }
+        return type;
     }
 
-    private static void ParseFactor()
+    private static string Factor()
     {
         if (_sym == LexicalAnalyzer.ident)
         {
-            NextToken();
-            // Обработка массива в выражении (например, x + a[i])
-            if (_sym == LexicalAnalyzer.lbracket)
-            {
-                NextToken();
-                ParseExpression();
-                Accept(LexicalAnalyzer.rbracket, 59);
-            }
+            return ParseVariableAccess(out string _);
         }
-        else if (_sym == LexicalAnalyzer.intc || _sym == LexicalAnalyzer.stringc)
+        else if (_sym == LexicalAnalyzer.intc)
         {
-            NextToken();
+            NextSym();
+            return "integer";
         }
         else if (_sym == LexicalAnalyzer.leftpar)
         {
-            NextToken();
-            ParseExpression();
-            Accept(LexicalAnalyzer.rightpar, 7); // Используем существующую ошибку №7
+            NextSym();
+            string type = Expression();
+            Accept(LexicalAnalyzer.rightpar, 35);
+            return type;
         }
         else if (_sym == LexicalAnalyzer.notsy)
         {
-            NextToken();
-            ParseFactor();
+            NextSym();
+            Factor();
+            return "boolean";
         }
         else
         {
-            Error(62); // Ошибка в выражении
-            SkipTo(new HashSet<byte> { LexicalAnalyzer.semicolon, LexicalAnalyzer.thensy, LexicalAnalyzer.dosy, LexicalAnalyzer.rightpar, LexicalAnalyzer.rbracket });
+            InputOutput.Error(36, LexicalAnalyzer.Token);
+            SkipTo(LexicalAnalyzer.semicolon, LexicalAnalyzer.endsy, LexicalAnalyzer.thensy, LexicalAnalyzer.ofsy);
+            return "unknown";
+        }
+    }
+
+    private static bool TypesCompatible(string left, string right)
+    {
+        if (left == right) 
+        {
+            return true;    
+        }
+        if (left == "unknown" || right == "unknown") 
+        {
+            return true;
+        }
+        if (left == "real" && right == "integer") 
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private static string MergeTypes(string left, string right)
+    {
+        if (left == "unknown" || right == "unknown") 
+        {
+            return "unknown";
+        }
+        if (left == right) 
+        {
+            return left;
+        }
+        if ((left == "real" && right == "integer") || (left == "integer" && right == "real")) 
+        {
+            return "real";
+        }
+        return left;
+    }
+
+    private static void ConstDeclarations()
+    {
+        Accept(LexicalAnalyzer.constsy, 16); 
+
+        string constName = "";
+        
+        while (_sym == LexicalAnalyzer.ident)
+        {
+            constName = LexicalAnalyzer.AddrName; 
+            NextSym();
+            
+            Accept(LexicalAnalyzer.equal, 8);
+            
+            if (_sym == LexicalAnalyzer.intc || _sym == LexicalAnalyzer.stringc) 
+            {
+                NextSym();
+            }
+            else
+            {
+                InputOutput.Error(37, LexicalAnalyzer.Token);
+                
+                SkipTo(LexicalAnalyzer.semicolon); 
+            }
+            
+            Accept(LexicalAnalyzer.semicolon, 14);
         }
     }
 }
